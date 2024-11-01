@@ -41,15 +41,17 @@ def summarize_brand_style(document):
     )
     return response.choices[0].message.content.strip()
 
+import re
+
 def extract_darts(document):
     """Extract detailed characteristics and psychographic drivers for each Dart from the uploaded document."""
     content = extract_text(document)
     
-    # Refined prompt for more structure in response
+    # Refined prompt to encourage clearer response
     prompt = (
-        f"Please list all Darts described in the following document, including the name of each Dart, its "
-        f"characteristics, and psychographic drivers in this format:\n\n"
-        f"Dart Name:\n- Characteristics: (list characteristics)\n- Psychographic Drivers: (list psychographic drivers)\n\n"
+        f"List all Darts described in the following document. For each Dart, provide the Dart name, followed by "
+        f"its characteristics and psychographic drivers. Use this structure:\n\n"
+        f"1. Dart Name: [Name]\n   - Characteristics: [List of characteristics]\n   - Psychographic Drivers: [List of psychographic drivers]\n\n"
         f"Document content:\n\n{content}"
     )
     
@@ -59,22 +61,17 @@ def extract_darts(document):
     )
     dart_text = response.choices[0].message.content.strip()
 
-    # Enhanced parsing logic to handle formatted response
+    # Enhanced parsing using regex to capture structured details
     darts = {}
-    current_dart = None
+    dart_pattern = r"(?:(?:\d+\.\s*)?Dart Name:\s*(.+?)\n- Characteristics:\s*(.+?)\n- Psychographic Drivers:\s*(.+?)(?=\n\d|$))"
+    matches = re.findall(dart_pattern, dart_text, re.DOTALL)
     
-    for line in dart_text.splitlines():
-        line = line.strip()
-        if line and not line.startswith("-") and ":" in line:
-            # Assuming a new Dart entry starts here (e.g., "Dart Name:")
-            current_dart = line.split(":", 1)[0].strip()
-            darts[current_dart] = {"Characteristics": "", "Psychographic Drivers": ""}
-        elif "Characteristics" in line and current_dart:
-            # Characteristics line within current Dart
-            darts[current_dart]["Characteristics"] = line.split(":", 1)[1].strip()
-        elif "Psychographic Drivers" in line and current_dart:
-            # Psychographic Drivers line within current Dart
-            darts[current_dart]["Psychographic Drivers"] = line.split(":", 1)[1].strip()
+    for match in matches:
+        dart_name, characteristics, psychographic_drivers = match
+        darts[dart_name.strip()] = {
+            "Characteristics": characteristics.strip(),
+            "Psychographic Drivers": psychographic_drivers.strip()
+        }
     
     return darts
 
