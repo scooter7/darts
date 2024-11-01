@@ -20,15 +20,23 @@ def extract_text(document):
 def extract_text_from_pdf(pdf_file):
     """Extract text from PDF using PyMuPDF."""
     text = ""
-    with fitz.open(stream=pdf_file.read(), filetype="pdf") as doc:
-        for page in doc:
-            text += page.get_text()
+    try:
+        with fitz.open(stream=pdf_file.read(), filetype="pdf") as doc:
+            for page in doc:
+                text += page.get_text()
+    except Exception as e:
+        st.error("Error reading PDF file. Please check the file and try again.")
+        text = ""
     return text
 
 def extract_text_from_word(word_file):
     """Extract text from Word document using python-docx."""
-    doc = Document(word_file)
-    text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+    try:
+        doc = Document(word_file)
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+    except Exception as e:
+        st.error("Error reading Word file. Please check the file and try again.")
+        text = ""
     return text
 
 def summarize_brand_style(document):
