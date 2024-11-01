@@ -70,7 +70,7 @@ def extract_dart_details(document, dart_name):
     """For each Dart name, extract characteristics and psychographic drivers."""
     content = extract_text(document)
     prompt = (
-        f"Provide the characteristics and psychographic drivers for the Dart '{dart_name}' based on the following "
+        f"Provide only the characteristics and psychographic drivers for the Dart '{dart_name}' based on the following "
         f"document content. Use this format:\n\n"
         f"- Characteristics: (list characteristics here)\n"
         f"- Psychographic Drivers: (list psychographic drivers here)\n\n"
@@ -95,7 +95,7 @@ def extract_dart_details(document, dart_name):
     return {"Characteristics": characteristics, "Psychographic Drivers": psychographic_drivers}
 
 def extract_all_darts(document):
-    """Combine functions to extract all Darts and their details."""
+    """Combine functions to extract all Darts and their details one by one."""
     darts = {}
     dart_names = extract_dart_names(document)
     
