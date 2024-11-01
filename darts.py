@@ -83,7 +83,7 @@ def summarize_brand_style(document):
     }
 
 def extract_dart_names(document):
-    """First, extract only the names of specific Darts (excluding generic ones) from the document."""
+    """Extract only the names of specific Darts (excluding generic and color-based ones) from the document."""
     content = extract_text(document)
     prompt = (
         f"List only the names of each Dart mentioned in the following document. Do not include any descriptions, "
@@ -95,10 +95,10 @@ def extract_dart_names(document):
         messages=[{"role": "user", "content": prompt}]
     )
     
-    # Split and clean each line to extract Dart names, then filter out generic names
+    # Split, clean, and filter out any Dart names containing color words or generic names
     dart_names = [
         line.strip() for line in response.choices[0].message.content.splitlines()
-        if line.strip() and line.strip() not in generic_darts
+        if line.strip() and all(color not in line for color in generic_darts)
     ]
     return dart_names
 
