@@ -83,7 +83,7 @@ def summarize_brand_style(document):
     }
 
 def extract_dart_names(document):
-    """Extract the names of Darts from the document, then filter out any color-based Darts."""
+    """First, extract only the names of specific Darts (excluding generic ones) from the document."""
     content = extract_text(document)
     prompt = (
         f"List only the names of each Dart mentioned in the following document. Do not include any descriptions, "
@@ -95,7 +95,7 @@ def extract_dart_names(document):
         messages=[{"role": "user", "content": prompt}]
     )
     
-    # Extract Dart names and then filter out generic, color-based names
+    # Split and clean each line to extract Dart names, then filter out generic names
     dart_names = [
         line.strip() for line in response.choices[0].message.content.splitlines()
         if line.strip() and line.strip() not in generic_darts
@@ -131,18 +131,16 @@ def extract_dart_details(document, dart_name):
     return {"Characteristics": characteristics, "Psychographic Drivers": psychographic_drivers}
 
 def extract_all_darts(document):
-    """Extract all Darts, then filter out any generic, color-based ones."""
+    """Combine functions to extract all specific Darts and their details one by one."""
     darts = {}
     dart_names = extract_dart_names(document)
     
     for dart_name in dart_names:
-        if dart_name not in generic_darts:  # Ensure color-based names are excluded
-            dart_details = extract_dart_details(document, dart_name)
-            darts[dart_name] = dart_details
+        dart_details = extract_dart_details(document, dart_name)
+        darts[dart_name] = dart_details
     
     return darts
 
-# Modify `generate_content_for_dart` to incorporate brand elements in the content strategy
 def generate_content_for_dart(content, brand_summary, dart_characteristics):
     """Generate content tailored for a specific Dart, considering brand guidelines."""
     
