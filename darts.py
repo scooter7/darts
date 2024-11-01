@@ -44,32 +44,36 @@ def summarize_brand_style(document):
 def extract_darts(document):
     """Extract detailed characteristics and psychographic drivers for each Dart from the uploaded document."""
     content = extract_text(document)
-    # Modified prompt to specify we need characteristics and psychographic drivers for each Dart
+    
+    # Refined prompt for more structure in response
     prompt = (
-        f"Extract all Darts described in the following document, listing each Dart with its characteristics and "
-        f"psychographic drivers. Format the response clearly with each Dart's name, characteristics, and "
-        f"psychographic drivers:\n\n{content}"
+        f"Please list all Darts described in the following document, including the name of each Dart, its "
+        f"characteristics, and psychographic drivers in this format:\n\n"
+        f"Dart Name:\n- Characteristics: (list characteristics)\n- Psychographic Drivers: (list psychographic drivers)\n\n"
+        f"Document content:\n\n{content}"
     )
+    
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
     dart_text = response.choices[0].message.content.strip()
 
-    # Parsing logic to create a dictionary with each Dart and its details
+    # Enhanced parsing logic to handle formatted response
     darts = {}
     current_dart = None
+    
     for line in dart_text.splitlines():
         line = line.strip()
-        if line.endswith(":") and "Characteristics" not in line and "Psychographic Drivers" not in line:
-            # New Dart entry
-            current_dart = line.rstrip(":")
+        if line and not line.startswith("-") and ":" in line:
+            # Assuming a new Dart entry starts here (e.g., "Dart Name:")
+            current_dart = line.split(":", 1)[0].strip()
             darts[current_dart] = {"Characteristics": "", "Psychographic Drivers": ""}
         elif "Characteristics" in line and current_dart:
-            # Characteristics line
+            # Characteristics line within current Dart
             darts[current_dart]["Characteristics"] = line.split(":", 1)[1].strip()
         elif "Psychographic Drivers" in line and current_dart:
-            # Psychographic Drivers line
+            # Psychographic Drivers line within current Dart
             darts[current_dart]["Psychographic Drivers"] = line.split(":", 1)[1].strip()
     
     return darts
