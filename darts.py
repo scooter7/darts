@@ -12,7 +12,7 @@ def summarize_brand_style(document):
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
 
 def extract_darts(document):
     # Extract Darts from the uploaded document
@@ -21,7 +21,7 @@ def extract_darts(document):
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    dart_text = response.choices[0].message["content"].strip()
+    dart_text = response.choices[0].message.content.strip()
     # Parse the response into a dictionary format
     darts = {line.split(":")[0].strip(): line.split(":")[1].strip() for line in dart_text.splitlines() if ":" in line}
     return darts
@@ -35,11 +35,11 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
     prompt = (f"Rewrite the following content to appeal to an audience with these characteristics: "
               f"{dart_characteristics}. Apply the following brand guidelines: {brand_summary}. "
               f"Here is the original content:\n\n{content}")
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
 
 # Main Script
 st.title("Email Content Personalization with Darts")
