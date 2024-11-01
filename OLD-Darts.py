@@ -6,6 +6,9 @@ from docx import Document  # python-docx for Word files
 # Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+# List of generic Darts (color-based) to exclude
+generic_darts = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Beige", "Silver", "Maroon"]
+
 # Helper Functions
 def extract_text(document):
     """Extract text from PDF or Word documents."""
@@ -50,7 +53,7 @@ def summarize_brand_style(document):
     return response.choices[0].message.content.strip()
 
 def extract_dart_names(document):
-    """First, extract only the names of Darts from the document."""
+    """First, extract only the names of specific Darts (excluding generic ones) from the document."""
     content = extract_text(document)
     prompt = (
         f"List only the names of each Dart mentioned in the following document. Do not include any descriptions, "
@@ -62,8 +65,11 @@ def extract_dart_names(document):
         messages=[{"role": "user", "content": prompt}]
     )
     
-    # Split and clean each line to extract Dart names
-    dart_names = [line.strip() for line in response.choices[0].message.content.splitlines() if line.strip()]
+    # Split and clean each line to extract Dart names, then filter out generic names
+    dart_names = [
+        line.strip() for line in response.choices[0].message.content.splitlines()
+        if line.strip() and line.strip() not in generic_darts
+    ]
     return dart_names
 
 def extract_dart_details(document, dart_name):
@@ -95,7 +101,7 @@ def extract_dart_details(document, dart_name):
     return {"Characteristics": characteristics, "Psychographic Drivers": psychographic_drivers}
 
 def extract_all_darts(document):
-    """Combine functions to extract all Darts and their details one by one."""
+    """Combine functions to extract all specific Darts and their details one by one."""
     darts = {}
     dart_names = extract_dart_names(document)
     
