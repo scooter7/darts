@@ -6,7 +6,7 @@ from docx import Document  # python-docx for Word files
 # Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# List of generic Darts (color-based) to exclude
+# List of generic color-based Dart keywords to exclude (case-insensitive)
 generic_darts = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Beige", "Silver", "Maroon"]
 
 # Helper Functions
@@ -83,7 +83,7 @@ def summarize_brand_style(document):
     }
 
 def extract_dart_names(document):
-    """First, extract only the names of specific Darts (excluding generic ones) from the document."""
+    """Extract only the names of specific Darts (excluding generic color-based ones) from the document."""
     content = extract_text(document)
     prompt = (
         f"List only the names of each Dart mentioned in the following document. Do not include any descriptions, "
@@ -95,10 +95,10 @@ def extract_dart_names(document):
         messages=[{"role": "user", "content": prompt}]
     )
     
-    # Split and clean each line to extract Dart names, then filter out generic names
+    # Extract Dart names and then filter out those that start with any color keyword (case-insensitive)
     dart_names = [
         line.strip() for line in response.choices[0].message.content.splitlines()
-        if line.strip() and line.strip() not in generic_darts
+        if line.strip() and not any(line.strip().lower().startswith(color.lower()) for color in generic_darts)
     ]
     return dart_names
 
