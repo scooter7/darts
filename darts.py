@@ -1,7 +1,7 @@
 import streamlit as st
 import openai
-import fitz  # PyMuPDF
-from docx import Document  # python-docx
+import fitz  # PyMuPDF for PDF text extraction
+from docx import Document  # python-docx for Word files
 
 # Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -41,17 +41,31 @@ def summarize_brand_style(document):
     )
     return response.choices[0].message.content.strip()
 
-import re
-
-def extract_darts(document):
-    """Extract detailed characteristics and psychographic drivers for each Dart from the uploaded document."""
+def extract_dart_names(document):
+    """First, extract only the names of Darts from the document."""
     content = extract_text(document)
-    
-    # Refined prompt to encourage clearer response
     prompt = (
-        f"List all Darts described in the following document. For each Dart, provide the Dart name, followed by "
-        f"its characteristics and psychographic drivers. Use this structure:\n\n"
-        f"1. Dart Name: [Name]\n   - Characteristics: [List of characteristics]\n   - Psychographic Drivers: [List of psychographic drivers]\n\n"
+        f"List only the names of each Dart mentioned in the following document. Do not include any descriptions, "
+        f"characteristics, or psychographic drivers, just list the Dart names as a numbered list:\n\n{content}"
+    )
+    
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    # Split and clean each line to extract Dart names
+    dart_names = [line.strip() for line in response.choices[0].message.content.splitlines() if line.strip()]
+    return dart_names
+
+def extract_dart_details(document, dart_name):
+    """For each Dart name, extract characteristics and psychographic drivers."""
+    content = extract_text(document)
+    prompt = (
+        f"Provide the characteristics and psychographic drivers for the Dart '{dart_name}' based on the following "
+        f"document content. Use this format:\n\n"
+        f"- Characteristics: (list characteristics here)\n"
+        f"- Psychographic Drivers: (list psychographic drivers here)\n\n"
         f"Document content:\n\n{content}"
     )
     
@@ -59,19 +73,27 @@ def extract_darts(document):
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    dart_text = response.choices[0].message.content.strip()
-
-    # Enhanced parsing using regex to capture structured details
-    darts = {}
-    dart_pattern = r"(?:(?:\d+\.\s*)?Dart Name:\s*(.+?)\n- Characteristics:\s*(.+?)\n- Psychographic Drivers:\s*(.+?)(?=\n\d|$))"
-    matches = re.findall(dart_pattern, dart_text, re.DOTALL)
     
-    for match in matches:
-        dart_name, characteristics, psychographic_drivers = match
-        darts[dart_name.strip()] = {
-            "Characteristics": characteristics.strip(),
-            "Psychographic Drivers": psychographic_drivers.strip()
-        }
+    # Extract characteristics and psychographic drivers from the response
+    details_text = response.choices[0].message.content.strip()
+    characteristics = ""
+    psychographic_drivers = ""
+    
+    if "Characteristics:" in details_text:
+        characteristics = details_text.split("Characteristics:", 1)[1].split("Psychographic Drivers:", 1)[0].strip()
+    if "Psychographic Drivers:" in details_text:
+        psychographic_drivers = details_text.split("Psychographic Drivers:", 1)[1].strip()
+    
+    return {"Characteristics": characteristics, "Psychographic Drivers": psychographic_drivers}
+
+def extract_all_darts(document):
+    """Combine functions to extract all Darts and their details."""
+    darts = {}
+    dart_names = extract_dart_names(document)
+    
+    for dart_name in dart_names:
+        dart_details = extract_dart_details(document, dart_name)
+        darts[dart_name] = dart_details
     
     return darts
 
@@ -104,10 +126,12 @@ st.subheader("Upload Client's Darts Document")
 darts_doc = st.file_uploader("Upload Darts document", type=["pdf", "docx", "txt"])
 
 if darts_doc is not None:
-    darts = extract_darts(darts_doc)
+    darts = extract_all_darts(darts_doc)
     st.write("**Client's Darts:**")
-    for dart, description in darts.items():
-        st.write(f"**{dart}**: {description}")
+    for dart, details in darts.items():
+        st.write(f"**{dart}**")
+        st.write(f"- **Characteristics**: {details['Characteristics']}")
+        st.write(f"- **Psychographic Drivers**: {details['Psychographic Drivers']}")
 
 # Step 3: Upload content document and select Dart for personalization
 st.subheader("Upload Content for Dart-Specific Personalization")
@@ -125,7 +149,7 @@ if content_doc is not None and darts:
     # Generate content for other Darts
     st.subheader("Generated Content for Other Darts")
     for dart in other_darts:
-        dart_characteristics = darts[dart]
+        dart_characteristics = darts[dart]["Characteristics"]
         generated_content = generate_content_for_dart(original_content, brand_summary, dart_characteristics)
         
         st.write(f"**Content for Dart - {dart}:**")
