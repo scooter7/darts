@@ -42,16 +42,36 @@ def summarize_brand_style(document):
     return response.choices[0].message.content.strip()
 
 def extract_darts(document):
-    """Extract Darts from the uploaded document."""
+    """Extract detailed characteristics and psychographic drivers for each Dart from the uploaded document."""
     content = extract_text(document)
-    prompt = f"Identify and list the Darts described in the following document:\n\n{content}"
+    # Modified prompt to specify we need characteristics and psychographic drivers for each Dart
+    prompt = (
+        f"Extract all Darts described in the following document, listing each Dart with its characteristics and "
+        f"psychographic drivers. Format the response clearly with each Dart's name, characteristics, and "
+        f"psychographic drivers:\n\n{content}"
+    )
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
     dart_text = response.choices[0].message.content.strip()
-    # Parse the response into a dictionary format
-    darts = {line.split(":")[0].strip(): line.split(":")[1].strip() for line in dart_text.splitlines() if ":" in line}
+
+    # Parsing logic to create a dictionary with each Dart and its details
+    darts = {}
+    current_dart = None
+    for line in dart_text.splitlines():
+        line = line.strip()
+        if line.endswith(":") and "Characteristics" not in line and "Psychographic Drivers" not in line:
+            # New Dart entry
+            current_dart = line.rstrip(":")
+            darts[current_dart] = {"Characteristics": "", "Psychographic Drivers": ""}
+        elif "Characteristics" in line and current_dart:
+            # Characteristics line
+            darts[current_dart]["Characteristics"] = line.split(":", 1)[1].strip()
+        elif "Psychographic Drivers" in line and current_dart:
+            # Psychographic Drivers line
+            darts[current_dart]["Psychographic Drivers"] = line.split(":", 1)[1].strip()
+    
     return darts
 
 def generate_content_for_dart(content, brand_summary, dart_characteristics):
