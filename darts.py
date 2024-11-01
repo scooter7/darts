@@ -17,7 +17,7 @@ def summarize_brand_style(document):
 def extract_darts(document):
     # Extract Darts from the uploaded document
     prompt = f"Identify and list the Darts described in the following document:\n\n{extract_text(document)}"
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
