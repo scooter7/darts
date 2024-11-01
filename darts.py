@@ -42,15 +42,45 @@ def extract_text_from_word(word_file):
         text = ""
     return text
 
+# Updated `summarize_brand_style` to extract key brand elements
 def summarize_brand_style(document):
-    """Summarize the brand and style guidelines from the document."""
+    """Extracts brand voice, positioning, and unique value propositions from the brand guidelines document."""
     content = extract_text(document)
-    prompt = f"Summarize the brand and style guidelines from the following document content:\n\n{content}"
+    
+    # Ask the model to extract specific brand elements
+    prompt = (
+        f"Extract the brand voice, brand positioning, and unique value propositions from the following brand guidelines. "
+        f"Structure the response as follows:\n\n"
+        f"- Brand Voice: (list voice characteristics)\n"
+        f"- Brand Positioning: (describe the positioning)\n"
+        f"- Unique Value Propositions: (list value propositions)\n\n"
+        f"Brand Guidelines Content:\n\n{content}"
+    )
+    
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message.content.strip()
+    
+    details_text = response.choices[0].message.content.strip()
+    
+    # Parsing brand elements from the response
+    brand_voice = ""
+    brand_positioning = ""
+    unique_value_propositions = ""
+    
+    if "Brand Voice:" in details_text:
+        brand_voice = details_text.split("Brand Voice:", 1)[1].split("Brand Positioning:", 1)[0].strip()
+    if "Brand Positioning:" in details_text:
+        brand_positioning = details_text.split("Brand Positioning:", 1)[1].split("Unique Value Propositions:", 1)[0].strip()
+    if "Unique Value Propositions:" in details_text:
+        unique_value_propositions = details_text.split("Unique Value Propositions:", 1)[1].strip()
+    
+    return {
+        "Brand Voice": brand_voice,
+        "Brand Positioning": brand_positioning,
+        "Unique Value Propositions": unique_value_propositions
+    }
 
 def extract_dart_names(document):
     """First, extract only the names of specific Darts (excluding generic ones) from the document."""
@@ -111,15 +141,29 @@ def extract_all_darts(document):
     
     return darts
 
+# Modify `generate_content_for_dart` to incorporate brand elements in the content strategy
 def generate_content_for_dart(content, brand_summary, dart_characteristics):
     """Generate content tailored for a specific Dart, considering brand guidelines."""
-    prompt = (f"Rewrite the following content to appeal to an audience with these characteristics: "
-              f"{dart_characteristics}. Apply the following brand guidelines: {brand_summary}. "
-              f"Here is the original content:\n\n{content}")
+    
+    # Incorporate extracted brand elements into the content generation strategy
+    brand_voice = brand_summary["Brand Voice"]
+    brand_positioning = brand_summary["Brand Positioning"]
+    unique_value_propositions = brand_summary["Unique Value Propositions"]
+    
+    prompt = (
+        f"Rewrite the following content to appeal to an audience with these characteristics: {dart_characteristics}. "
+        f"Ensure the content reflects the brand voice, positioning, and unique value propositions as described:\n\n"
+        f"- Brand Voice: {brand_voice}\n"
+        f"- Brand Positioning: {brand_positioning}\n"
+        f"- Unique Value Propositions: {unique_value_propositions}\n\n"
+        f"Here is the original content:\n\n{content}"
+    )
+    
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
+    
     return response.choices[0].message.content.strip()
 
 # Main Script
@@ -132,8 +176,12 @@ brand_style_guide = st.file_uploader("Choose a PDF or Word document", type=["pdf
 
 if brand_style_guide is not None:
     brand_summary = summarize_brand_style(brand_style_guide)
-    st.write("**Brand and Style Summary:**")
-    st.write(brand_summary)
+    st.write("**Brand Voice:**")
+    st.write(brand_summary["Brand Voice"])
+    st.write("**Brand Positioning:**")
+    st.write(brand_summary["Brand Positioning"])
+    st.write("**Unique Value Propositions:**")
+    st.write(brand_summary["Unique Value Propositions"])
 
 # Step 2: Upload and display client’s Darts document
 st.subheader("Upload Client's Darts Document")
