@@ -8,7 +8,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 def summarize_brand_style(document):
     # Extract and summarize brand and style guidelines
     prompt = f"Summarize the brand and style guidelines from the following document content:\n\n{extract_text(document)}"
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
