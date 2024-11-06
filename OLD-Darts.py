@@ -69,13 +69,24 @@ def summarize_brand_style(document=None, manual_input=None):
         "Unique Value Propositions": ""
     }
     if "Brand Voice:" in details_text:
-        brand_elements["Brand Voice"] = details_text.split("Brand Voice:", 1)[1].split("Brand Positioning:", 1)[0].strip()
+        brand_elements["Brand Voice"] = details_text.split("Brand Voice:", 1)[1].split("Brand Positioning:", 1)[0].strip().strip("*-")
     if "Brand Positioning:" in details_text:
-        brand_elements["Brand Positioning"] = details_text.split("Brand Positioning:", 1)[1].split("Unique Value Propositions:", 1)[0].strip()
+        brand_elements["Brand Positioning"] = details_text.split("Brand Positioning:", 1)[1].split("Unique Value Propositions:", 1)[0].strip().strip("*-")
     if "Unique Value Propositions:" in details_text:
-        brand_elements["Unique Value Propositions"] = details_text.split("Unique Value Propositions:", 1)[1].strip()
+        brand_elements["Unique Value Propositions"] = details_text.split("Unique Value Propositions:", 1)[1].strip().strip("*-")
+
+    # Ensure formatting does not include extra symbols or repeated sections
+    for key, value in brand_elements.items():
+        if not value or value.lower() == "no information available.":
+            brand_elements[key] = "No information available."
 
     return brand_elements
+
+def format_list(content):
+    """Format content into a clean list."""
+    if content:
+        return '\n'.join([f"- {line.strip()}" for line in content.splitlines() if line.strip() and line.strip() != '-'])
+    return "No information available."
 
 def extract_dart_names(document):
     """Extract only the names of specific Darts (excluding generic and color-based ones) from the document."""
@@ -117,11 +128,14 @@ def extract_dart_details(document, dart_name):
     psychographic_drivers = ""
     
     if "Characteristics:" in details_text:
-        characteristics = details_text.split("Characteristics:", 1)[1].split("Psychographic Drivers:", 1)[0].strip()
+        characteristics = details_text.split("Characteristics:", 1)[1].split("Psychographic Drivers:", 1)[0].strip().strip("*-")
     if "Psychographic Drivers:" in details_text:
-        psychographic_drivers = details_text.split("Psychographic Drivers:", 1)[1].strip()
+        psychographic_drivers = details_text.split("Psychographic Drivers:", 1)[1].strip().strip("*-")
     
-    return {"Characteristics": characteristics, "Psychographic Drivers": psychographic_drivers}
+    return {
+        "Characteristics": format_list(characteristics),
+        "Psychographic Drivers": format_list(psychographic_drivers)
+    }
 
 def extract_all_darts(document):
     """Combine functions to extract all specific Darts and their details one by one."""
@@ -184,12 +198,10 @@ if darts_doc:
     darts = extract_all_darts(darts_doc)
     st.write("**Client's Darts:**")
     for dart, details in darts.items():
-        if details["Characteristics"] or details["Psychographic Drivers"]:
+        if details["Characteristics"] != "No information available." or details["Psychographic Drivers"] != "No information available.":
             st.write(f"**{dart}**")
-            if details["Characteristics"]:
-                st.write(f"- Characteristics: {details['Characteristics']}")
-            if details["Psychographic Drivers"]:
-                st.write(f"- Psychographic Drivers: {details['Psychographic Drivers']}")
+            st.write(f"- Characteristics:\n{details['Characteristics']}")
+            st.write(f"- Psychographic Drivers:\n{details['Psychographic Drivers']}")
 
 # Step 3: Upload content for Dart-specific personalization
 st.subheader("Content Personalization for All Darts")
