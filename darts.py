@@ -223,8 +223,7 @@ if content_doc and darts:
     st.write("**Original Content:**")
     st.write(original_content)
 
-    # Generate Dart-specific content and store for downloads
-    generated_contents = {}
+    # Generate Dart-specific content and provide download buttons immediately below each section
     st.subheader("Generated Content for Each Dart")
     for dart, details in darts.items():
         dart_characteristics = details["Characteristics"]
@@ -232,18 +231,13 @@ if content_doc and darts:
         st.write(f"**Content for Dart - {dart}:**")
         st.write(generated_content)
 
-        # Store content for download
-        generated_contents[dart] = generated_content
-
-    # Download buttons for each Dart's content
-    for dart, content in generated_contents.items():
-        if st.button(f"Download content for {dart}"):
-            st.download_button(
-                label="Download",
-                data=content,
-                file_name=f"{dart.replace(' ', '_')}_content.txt",
-                mime="text/plain"
-            )
+        # Place the download button below the content
+        st.download_button(
+            label="Download",
+            data=generated_content,
+            file_name=f"{dart.replace(' ', '_')}_content.txt",
+            mime="text/plain"
+        )
 
 # Step 4: User revision input for generated content
 st.subheader("User Revision Input")
@@ -267,11 +261,10 @@ if st.session_state["content_to_revise"] and st.session_state["revision_instruct
         st.write("**Revised Content Preview:**")
         st.write(revised_content)
 
-        # Button to trigger download without app re-run
-        if st.button("Download Revised Content"):
-            st.download_button(
-                label="Download",
-                data=revised_content,
-                file_name="revised_content.txt",
-                mime="text/plain"
-            )
+        # Create a downloadable link for the revised content directly below the preview
+        st.download_button(
+            label="Download Revised Content",
+            data=revised_content,
+            file_name="revised_content.txt",
+            mime="text/plain"
+        )
