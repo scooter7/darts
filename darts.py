@@ -59,10 +59,6 @@ def summarize_brand_style(document=None, manual_input=None):
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-
-    # Debugging: Show the raw response in Streamlit (useful for troubleshooting)
-    st.write("**Debug: Raw response from API**")
-    st.write(response.choices[0].message.content.strip())
     
     details_text = response.choices[0].message.content.strip()
 
@@ -79,9 +75,9 @@ def summarize_brand_style(document=None, manual_input=None):
     if "Unique Value Propositions:" in details_text:
         brand_elements["Unique Value Propositions"] = details_text.split("Unique Value Propositions:", 1)[1].strip().strip("*-")
 
-    # Ensure formatting does not include extra symbols or empty points
+    # Ensure formatting does not include extra symbols or repeated sections
     for key, value in brand_elements.items():
-        if not value or value == '-':
+        if not value or value.lower() == "no information available.":
             brand_elements[key] = "No information available."
 
     return brand_elements
