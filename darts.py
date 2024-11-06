@@ -121,7 +121,7 @@ def extract_dart_details(document, dart_name):
         f"Document content:\n\n{content}"
     )
 
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
