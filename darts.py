@@ -80,13 +80,11 @@ def summarize_brand_style(document=None, manual_input=None):
         if not value or value.lower() == "no information available.":
             brand_elements[key] = "No information available."
 
-    return brand_elements
+    return {key: remove_bullets(value) for key, value in brand_elements.items()}
 
-def format_text(content):
-    """Format content into plain text without bullet points."""
-    if content:
-        return '\n'.join([line.strip() for line in content.splitlines() if line.strip()])
-    return "No information available."
+def remove_bullets(text):
+    """Remove bullet points or special characters from the beginning of each line."""
+    return '\n'.join([line.lstrip("-*•").strip() for line in text.splitlines() if line.strip()])
 
 def extract_dart_names(document):
     """Extract only the names of specific Darts (excluding generic and color-based ones) from the document."""
@@ -133,8 +131,8 @@ def extract_dart_details(document, dart_name):
         psychographic_drivers = details_text.split("Psychographic Drivers:", 1)[1].strip().strip("*-")
     
     return {
-        "Characteristics": format_text(characteristics),
-        "Psychographic Drivers": format_text(psychographic_drivers)
+        "Characteristics": remove_bullets(characteristics),
+        "Psychographic Drivers": remove_bullets(psychographic_drivers)
     }
 
 def extract_all_darts(document):
