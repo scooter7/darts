@@ -3,6 +3,7 @@ import openai
 import fitz  # PyMuPDF for PDF text extraction
 from docx import Document  # python-docx for Word files
 import re  # Import regex for pattern matching
+import base64  # For encoding download content
 
 # Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -169,6 +170,12 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
     
     return format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
 
+def create_download_link(text, filename):
+    """Create an HTML link to download a text file."""
+    b64 = base64.b64encode(text.encode()).decode()  # Encode to base64
+    href = f'<a href="data:text/plain;base64,{b64}" download="{filename}">Download {filename}</a>'
+    return href
+
 # Main Script
 st.title("Email Content Personalization with Darts")
 
@@ -223,7 +230,7 @@ if content_doc and darts:
     st.write("**Original Content:**")
     st.write(original_content)
 
-    # Generate Dart-specific content and provide download buttons immediately below each section
+    # Generate Dart-specific content and provide download links immediately below each section
     st.subheader("Generated Content for Each Dart")
     for dart, details in darts.items():
         dart_characteristics = details["Characteristics"]
@@ -231,13 +238,9 @@ if content_doc and darts:
         st.write(f"**Content for Dart - {dart}:**")
         st.write(generated_content)
 
-        # Place the download button below the content
-        st.download_button(
-            label="Download",
-            data=generated_content,
-            file_name=f"{dart.replace(' ', '_')}_content.txt",
-            mime="text/plain"
-        )
+        # Create a custom download link using markdown
+        download_link = create_download_link(generated_content, f"{dart.replace(' ', '_')}_content.txt")
+        st.markdown(download_link, unsafe_allow_html=True)
 
 # Step 4: User revision input for generated content
 st.subheader("User Revision Input")
@@ -261,10 +264,6 @@ if st.session_state["content_to_revise"] and st.session_state["revision_instruct
         st.write("**Revised Content Preview:**")
         st.write(revised_content)
 
-        # Create a downloadable link for the revised content directly below the preview
-        st.download_button(
-            label="Download Revised Content",
-            data=revised_content,
-            file_name="revised_content.txt",
-            mime="text/plain"
-        )
+        # Create a download link for the revised content
+        download_link = create_download_link(revised_content, "revised_content.txt")
+        st.markdown(download_link, unsafe_allow_html=True)
