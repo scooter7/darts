@@ -85,7 +85,8 @@ def summarize_brand_style(document=None, manual_input=None):
 
 def remove_bullets(text):
     """Remove bullet points, numbered lists, or special characters from the beginning of each line."""
-    return '\n'.join([re.sub(r'^\d+\.\s*|^[\-*•]\s*', '', line).strip() for line in text.splitlines() if line.strip()])
+    cleaned_text = '\n'.join([re.sub(r'^\d+\.\s*|^[\-*•]\s*', '', line).strip() for line in text.splitlines() if line.strip()])
+    return cleaned_text.replace('*', '')
 
 def extract_dart_names(document):
     """Extract only the names of specific Darts (excluding generic and color-based ones) from the document."""
@@ -169,7 +170,7 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
         messages=[{"role": "user", "content": prompt}]
     )
     
-    return response.choices[0].message.content.strip()
+    return remove_bullets(response.choices[0].message.content.strip())
 
 def download_text_file(file_name, content):
     """Create a downloadable link for a text file with the given content."""
@@ -234,6 +235,13 @@ if content_doc and darts:
 
 # Step 4: User revision input for generated content
 st.subheader("User Revision Input")
-revision_input = st.text_area("Paste generated content here and specify any desired revisions:", height=200)
-if revision_input:
-    st.write("You can now make edits or specify your desired changes to the content above.")
+revision_instructions = st.text_area("Specify the revisions to be made:")
+content_to_revise = st.text_area("Paste the content to be revised here:", height=200)
+
+if content_to_revise:
+    revised_content = f"Instructions for revision: {revision_instructions}\n\nContent to revise:\n{remove_bullets(content_to_revise)}"
+    st.write("**Revised Content Preview:**")
+    st.write(revised_content)
+
+    # Create a downloadable link for the revised content
+    download_text_file("revised_content.txt", revised_content)
