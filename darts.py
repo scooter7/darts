@@ -171,6 +171,15 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
     
     return response.choices[0].message.content.strip()
 
+def download_text_file(file_name, content):
+    """Create a downloadable link for a text file with the given content."""
+    st.download_button(
+        label=f"Download {file_name}",
+        data=content,
+        file_name=file_name,
+        mime="text/plain"
+    )
+
 # Main Script
 st.title("Email Content Personalization with Darts")
 
@@ -211,10 +220,20 @@ if content_doc and darts:
     st.write("**Original Content:**")
     st.write(original_content)
 
-    # Generate Dart-specific content
+    # Generate Dart-specific content and provide download links
     st.subheader("Generated Content for Each Dart")
     for dart, details in darts.items():
         dart_characteristics = details["Characteristics"]
         generated_content = generate_content_for_dart(original_content, brand_summary, dart_characteristics)
         st.write(f"**Content for Dart - {dart}:**")
         st.write(generated_content)
+
+        # Create a downloadable link for each Dart's content
+        file_name = f"{dart.replace(' ', '_')}_content.txt"
+        download_text_file(file_name, generated_content)
+
+# Step 4: User revision input for generated content
+st.subheader("User Revision Input")
+revision_input = st.text_area("Paste generated content here and specify any desired revisions:", height=200)
+if revision_input:
+    st.write("You can now make edits or specify your desired changes to the content above.")
