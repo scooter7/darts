@@ -10,6 +10,12 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 # List of generic Darts (color-based) to exclude
 generic_darts = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Beige", "Silver", "Maroon"]
 
+# Initialize session state for user inputs
+if "content_to_revise" not in st.session_state:
+    st.session_state["content_to_revise"] = ""
+if "revision_instructions" not in st.session_state:
+    st.session_state["revision_instructions"] = ""
+
 # Helper Functions
 def extract_text(document):
     """Extract text from PDF or Word documents."""
@@ -241,24 +247,25 @@ if content_doc and darts:
 
 # Step 4: User revision input for generated content
 st.subheader("User Revision Input")
-content_to_revise = st.text_area("Paste the content to be revised here:", height=200)
-revision_instructions = st.text_area("Specify the revisions to be made:")
+st.session_state["content_to_revise"] = st.text_area("Paste the content to be revised here:", height=200, value=st.session_state["content_to_revise"])
+st.session_state["revision_instructions"] = st.text_area("Specify the revisions to be made:", value=st.session_state["revision_instructions"])
 
-if content_to_revise and revision_instructions:
-    prompt = (
-        f"Revise the following content based on these instructions:\n\n"
-        f"Instructions: {revision_instructions}\n\n"
-        f"Content:\n{content_to_revise}"
-    )
-    
-    response = openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    
-    revised_content = format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
-    st.write("**Revised Content Preview:**")
-    st.write(revised_content)
+if st.session_state["content_to_revise"] and st.session_state["revision_instructions"]:
+    if st.button("Generate Revised Content"):
+        prompt = (
+            f"Revise the following content based on these instructions:\n\n"
+            f"Instructions: {st.session_state['revision_instructions']}\n\n"
+            f"Content:\n{st.session_state['content_to_revise']}"
+        )
+        
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        revised_content = format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
+        st.write("**Revised Content Preview:**")
+        st.write(revised_content)
 
-    # Create a downloadable link for the revised content
-    download_text_file("revised_content.txt", revised_content, key="revised_download")
+        # Create a downloadable link for the revised content
+        download_text_file("revised_content.txt", revised_content, key="revised_download")
