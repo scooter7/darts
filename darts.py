@@ -82,10 +82,10 @@ def summarize_brand_style(document=None, manual_input=None):
 
     return brand_elements
 
-def format_list(content):
-    """Format content into a clean list."""
+def format_text(content):
+    """Format content into plain text without bullet points."""
     if content:
-        return '\n'.join([f"- {line.strip()}" for line in content.splitlines() if line.strip() and line.strip() != '-'])
+        return '\n'.join([line.strip() for line in content.splitlines() if line.strip()])
     return "No information available."
 
 def extract_dart_names(document):
@@ -133,8 +133,8 @@ def extract_dart_details(document, dart_name):
         psychographic_drivers = details_text.split("Psychographic Drivers:", 1)[1].strip().strip("*-")
     
     return {
-        "Characteristics": format_list(characteristics),
-        "Psychographic Drivers": format_list(psychographic_drivers)
+        "Characteristics": format_text(characteristics),
+        "Psychographic Drivers": format_text(psychographic_drivers)
     }
 
 def extract_all_darts(document):
@@ -200,8 +200,8 @@ if darts_doc:
     for dart, details in darts.items():
         if details["Characteristics"] != "No information available." or details["Psychographic Drivers"] != "No information available.":
             st.write(f"**{dart}**")
-            st.write(f"- Characteristics:\n{details['Characteristics']}")
-            st.write(f"- Psychographic Drivers:\n{details['Psychographic Drivers']}")
+            st.write(f"Characteristics:\n{details['Characteristics']}")
+            st.write(f"Psychographic Drivers:\n{details['Psychographic Drivers']}")
 
 # Step 3: Upload content for Dart-specific personalization
 st.subheader("Content Personalization for All Darts")
