@@ -49,46 +49,36 @@ def remove_bullets(text):
     cleaned_text = '\n'.join([re.sub(r'^\d+\.\s*|^[\-*•]\s*', '', line).strip() for line in text.splitlines() if line.strip()])
     return cleaned_text.replace('*', '')
 
-# Summarize brand elements with an optional manual entry
-def summarize_brand_style(document=None, manual_input=None):
-    if document:
-        content = extract_text(document)
-    elif manual_input:
-        content = manual_input
-    else:
-        return {}
-
-    prompt = (
-        f"Extract the brand voice, brand positioning, and unique value propositions from the following brand guidelines. "
-        f"Structure the response as follows:\n\n"
-        f"- Brand Voice:\n- Brand Positioning:\n- Unique Value Propositions:\n\n"
-        f"Brand Guidelines Content:\n\n{content}"
-    )
-    
-    response = openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    
-    details_text = response.choices[0].message.content.strip()
-
+def parse_brand_elements(details_text):
+    """Parse and separate brand elements from the response."""
     brand_elements = {
         "Brand Voice": "",
         "Brand Positioning": "",
         "Unique Value Propositions": ""
     }
-    if "Brand Voice:" in details_text:
-        brand_elements["Brand Voice"] = details_text.split("Brand Voice:", 1)[1].split("Brand Positioning:", 1)[0].strip().strip("*-")
-    if "Brand Positioning:" in details_text:
-        brand_elements["Brand Positioning"] = details_text.split("Brand Positioning:", 1)[1].split("Unique Value Propositions:", 1)[0].strip().strip("*-")
-    if "Unique Value Propositions:" in details_text:
-        brand_elements["Unique Value Propositions"] = details_text.split("Unique Value Propositions:", 1)[1].strip().strip("*-")
+    
+    # Use regex to find sections and their content
+    brand_voice_match = re.search(r'Brand Voice:(.*?)(?=Brand Positioning:|Unique Value Propositions:|$)', details_text, re.S)
+    brand_positioning_match = re.search(r'Brand Positioning:(.*?)(?=Unique Value Propositions:|$)', details_text, re.S)
+    unique_value_propositions_match = re.search(r'Unique Value Propositions:(.*)', details_text, re.S)
+    
+    if brand_voice_match:
+        brand_elements["Brand Voice"] = brand_voice_match.group(1).strip()
+    if brand_positioning_match:
+        brand_elements["Brand Positioning"] = brand_positioning_match.group(1).strip()
+    if unique_value_propositions_match:
+        brand_elements["Unique Value Propositions"] = unique_value_propositions_match.group(1).strip()
 
+    # Clean up any non-essential characters
+    for key in brand_elements:
+        brand_elements[key] = remove_bullets(brand_elements[key])
+
+    # Ensure no section is marked as "No information available" if it contains content
     for key, value in brand_elements.items():
-        if not value or value.lower() == "no information available.":
+        if not value:
             brand_elements[key] = "No information available."
-
-    return {key: remove_bullets(value) for key, value in brand_elements.items()}
+    
+    return brand_elements
 
 def extract_dart_names(document):
     """Extract only the names of specific Darts (excluding generic and color-based ones) from the document."""
@@ -192,7 +182,21 @@ brand_style_guide = st.file_uploader("Upload a PDF or Word document (optional)",
 manual_brand_input = st.text_area("Or, enter brand voice, positioning, and unique value propositions manually if no file is uploaded:")
 
 if brand_style_guide or manual_brand_input:
-    brand_summary = summarize_brand_style(brand_style_guide, manual_brand_input)
+    content = extract_text(brand_style_guide) if brand_style_guide else manual_brand_input
+    prompt = (
+        f"Extract the brand voice, brand positioning, and unique value propositions from the following brand guidelines. "
+        f"Structure the response as follows:\n\n"
+        f"- Brand Voice:\n- Brand Positioning:\n- Unique Value Propositions:\n\n"
+        f"Brand Guidelines Content:\n\n{content}"
+    )
+    
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    brand_summary = parse_brand_elements(response.choices[0].message.content.strip())
+    
     if brand_summary:
         st.write("**Brand Voice:**")
         st.write(brand_summary["Brand Voice"])
