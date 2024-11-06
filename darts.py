@@ -11,7 +11,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 # List of generic Darts (color-based) to exclude
 generic_darts = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Beige", "Silver", "Maroon"]
 
-# Initialize session state for user inputs and revisions
+# Initialize session state for user inputs
 if "content_to_revise" not in st.session_state:
     st.session_state["content_to_revise"] = ""
 if "revision_instructions" not in st.session_state:
@@ -164,7 +164,7 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
         f"- Brand Voice: {brand_voice}\n"
         f"- Brand Positioning: {brand_positioning}\n"
         f"- Unique Value Propositions: {unique_value_propositions}\n\n"
-        f"Here is the original content:\n\n{content}"
+        f"Here is the original content:\n\n{content}\n\nDo not use any emojis."
     )
 
     response = openai.chat.completions.create(
@@ -196,14 +196,14 @@ if brand_style_guide or manual_brand_input:
         f"- Brand Voice:\n- Brand Positioning:\n- Unique Value Propositions:\n\n"
         f"Brand Guidelines Content:\n\n{content}"
     )
-
+    
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-
+    
     brand_summary = parse_brand_elements(response.choices[0].message.content.strip())
-
+    
     if brand_summary:
         st.write("**Brand Voice:**")
         st.write(brand_summary["Brand Voice"])
@@ -218,6 +218,7 @@ darts_doc = st.file_uploader("Upload Darts document", type=["pdf", "docx", "txt"
 
 if darts_doc:
     darts = extract_all_darts(darts_doc)
+    st.session_state['generated_darts'] = darts
     st.write("**Client's Darts:**")
     for dart, details in darts.items():
         if details["Characteristics"] != "No information available." or details["Psychographic Drivers"] != "No information available.":
@@ -229,38 +230,41 @@ if darts_doc:
 st.subheader("Content Personalization for All Darts")
 content_doc = st.file_uploader("Upload sample content (e.g., an email)", type=["pdf", "docx", "txt"])
 
-if content_doc and darts:
+if content_doc and 'generated_darts' in st.session_state:
     original_content = extract_text(content_doc)
     st.write("**Original Content:**")
-    st.write(original_content)
+    st.write(f"<div style='background-color: #f0f0f0; padding: 10px; border-radius: 5px;'>{original_content}</div>", unsafe_allow_html=True)
 
     # Generate Dart-specific content and provide download links immediately below each section
     st.subheader("Generated Content for Each Dart")
-    for dart, details in darts.items():
+    for dart, details in st.session_state['generated_darts'].items():
         dart_characteristics = details["Characteristics"]
         generated_content = generate_content_for_dart(original_content, brand_summary, dart_characteristics)
-        st.markdown(f"<div style='background-color: #f0f0f0; padding: 10px; border-radius: 5px;'><strong>Content for Dart - {dart}:</strong><br>{generated_content}</div>", unsafe_allow_html=True)
+        st.write(f"**Content for Dart - {dart}:**")
+        st.write(f"<div style='background-color: #f0f0f0; padding: 10px; border-radius: 5px;'>{generated_content}</div>", unsafe_allow_html=True)
 
-        revision_prompt = st.text_input(f"Provide revisions for {dart}:", key=f"revision_prompt_{dart}")
-        if st.button(f"Revise Content for {dart}", key=f"revise_button_{dart}"):
-            if revision_prompt:
+        # Create a hyperlink for downloading the first draft
+        download_link = create_download_link(generated_content, f"{dart.replace(' ', '_')}_content.txt")
+        st.markdown(download_link, unsafe_allow_html=True)
+
+        # Revision functionality
+        revision_input = st.text_input(f"Enter revision instructions for '{dart}':", key=f"revision_input_{dart}")
+        if st.button(f"Revise Content for '{dart}'", key=f"revise_button_{dart}"):
+            if revision_input:
+                revision_prompt = (
+                    f"Revise the following content based on these instructions:\n\n"
+                    f"Instructions: {revision_input}\n\n"
+                    f"Content:\n{generated_content}\n\nDo not use any emojis."
+                )
                 revision_response = openai.chat.completions.create(
                     model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": f"Revise the following content based on the user's feedback:\n\n{generated_content}"},
-                        {"role": "user", "content": revision_prompt}
-                    ]
+                    messages=[{"role": "user", "content": revision_prompt}]
                 )
                 revised_content = format_with_spacing(remove_bullets(revision_response.choices[0].message.content.strip()))
-                st.write("**Revised Content Preview:**")
-                st.markdown(f"<div style='background-color: #e0e0e0; padding: 10px; border-radius: 5px;'>{revised_content}</div>", unsafe_allow_html=True)
+                st.session_state['revised_darts'].append((dart, revised_content))
+                st.write(f"**Revised Content for '{dart}':**")
+                st.write(f"<div style='background-color: #f0f0f0; padding: 10px; border-radius: 5px;'>{revised_content}</div>", unsafe_allow_html=True)
 
-                # Create download link for the revised content
-                revised_content_text = f"{dart}\n\n{revised_content}"
-                st.download_button(
-                    label="Download Revised Content as Text",
-                    data=revised_content_text,
-                    file_name=f"{dart.replace(' ', '_')}_revised.txt",
-                    mime="text/plain",
-                    key=f"download_button_revised_{dart}"
-                )
+                # Create a hyperlink for downloading the revised content
+                revised_download_link = create_download_link(revised_content, f"{dart.replace(' ', '_')}_revised.txt")
+                st.markdown(revised_download_link, unsafe_allow_html=True)
