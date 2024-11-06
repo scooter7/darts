@@ -11,7 +11,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 # List of generic Darts (color-based) to exclude
 generic_darts = ["Red", "Green", "Blue", "Yellow", "Purple", "Orange", "Pink", "Beige", "Silver", "Maroon"]
 
-# Initialize session state for user inputs
+# Initialize session state for user inputs and revisions
 if "content_to_revise" not in st.session_state:
     st.session_state["content_to_revise"] = ""
 if "revision_instructions" not in st.session_state:
@@ -218,7 +218,6 @@ darts_doc = st.file_uploader("Upload Darts document", type=["pdf", "docx", "txt"
 
 if darts_doc:
     darts = extract_all_darts(darts_doc)
-    st.session_state['generated_darts'] = darts  # Save extracted darts in session state
     st.write("**Client's Darts:**")
     for dart, details in darts.items():
         if details["Characteristics"] != "No information available." or details["Psychographic Drivers"] != "No information available.":
@@ -230,45 +229,38 @@ if darts_doc:
 st.subheader("Content Personalization for All Darts")
 content_doc = st.file_uploader("Upload sample content (e.g., an email)", type=["pdf", "docx", "txt"])
 
-if content_doc and 'generated_darts' in st.session_state:
+if content_doc and darts:
     original_content = extract_text(content_doc)
     st.write("**Original Content:**")
-    st.text_area("Displayed Content", original_content, height=200, key="original_display")
+    st.write(original_content)
 
+    # Generate Dart-specific content and provide download links immediately below each section
     st.subheader("Generated Content for Each Dart")
-    for dart, details in st.session_state['generated_darts'].items():
+    for dart, details in darts.items():
         dart_characteristics = details["Characteristics"]
         generated_content = generate_content_for_dart(original_content, brand_summary, dart_characteristics)
-        st.session_state['generated_darts'][dart] = generated_content  # Save in session state
-        st.write(f"**Content for Dart - {dart}:**")
-        st.text_area(f"Generated Content for {dart}", generated_content, height=150, key=f"generated_{dart}")
+        st.markdown(f"<div style='background-color: #f0f0f0; padding: 10px; border-radius: 5px;'><strong>Content for Dart - {dart}:</strong><br>{generated_content}</div>", unsafe_allow_html=True)
 
-        # Create a custom download link using markdown
-        download_link = create_download_link(generated_content, f"{dart.replace(' ', '_')}_content.txt")
-        st.markdown(download_link, unsafe_allow_html=True)
+        revision_prompt = st.text_input(f"Provide revisions for {dart}:", key=f"revision_prompt_{dart}")
+        if st.button(f"Revise Content for {dart}", key=f"revise_button_{dart}"):
+            if revision_prompt:
+                revision_response = openai.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": f"Revise the following content based on the user's feedback:\n\n{generated_content}"},
+                        {"role": "user", "content": revision_prompt}
+                    ]
+                )
+                revised_content = format_with_spacing(remove_bullets(revision_response.choices[0].message.content.strip()))
+                st.write("**Revised Content Preview:**")
+                st.markdown(f"<div style='background-color: #e0e0e0; padding: 10px; border-radius: 5px;'>{revised_content}</div>", unsafe_allow_html=True)
 
-# Step 4: User revision input for generated content
-st.subheader("User Revision Input")
-st.session_state["content_to_revise"] = st.text_area("Paste the content to be revised here:", height=200, value=st.session_state["content_to_revise"])
-st.session_state["revision_instructions"] = st.text_area("Specify the revisions to be made:", value=st.session_state["revision_instructions"])
-
-if st.session_state["content_to_revise"] and st.session_state["revision_instructions"]:
-    if st.button("Generate Revised Content"):
-        prompt = (
-            f"Revise the following content based on these instructions:\n\n"
-            f"Instructions: {st.session_state['revision_instructions']}\n\n"
-            f"Content:\n{st.session_state['content_to_revise']}"
-        )
-
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
-        )
-
-        revised_content = format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
-        st.write("**Revised Content Preview:**")
-        st.text_area("Revised Content", revised_content, height=200, key="revised_display")
-
-        # Create a download link for the revised content
-        download_link = create_download_link(revised_content, "revised_content.txt")
-        st.markdown(download_link, unsafe_allow_html=True)
+                # Create download link for the revised content
+                revised_content_text = f"{dart}\n\n{revised_content}"
+                st.download_button(
+                    label="Download Revised Content as Text",
+                    data=revised_content_text,
+                    file_name=f"{dart.replace(' ', '_')}_revised.txt",
+                    mime="text/plain",
+                    key=f"download_button_revised_{dart}"
+                )
