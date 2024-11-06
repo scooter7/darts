@@ -59,6 +59,10 @@ def summarize_brand_style(document=None, manual_input=None):
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
+
+    # Debugging: Show the raw response in Streamlit (useful for troubleshooting)
+    st.write("**Debug: Raw response from API**")
+    st.write(response.choices[0].message.content.strip())
     
     details_text = response.choices[0].message.content.strip()
 
