@@ -197,7 +197,7 @@ if brand_style_guide or manual_brand_input:
         f"Brand Guidelines Content:\n\n{content}"
     )
 
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
