@@ -167,7 +167,7 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
         f"Here is the original content:\n\n{content}"
     )
 
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
@@ -260,7 +260,7 @@ if st.session_state["content_to_revise"] and st.session_state["revision_instruct
             f"Content:\n{st.session_state['content_to_revise']}"
         )
 
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
         )
