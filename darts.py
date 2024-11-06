@@ -99,7 +99,7 @@ def extract_dart_names(document):
         f"characteristics, or psychographic drivers, just list the Dart names as a numbered list:\n\n{content}"
     )
 
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
