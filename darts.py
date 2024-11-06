@@ -169,16 +169,6 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
     
     return format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
 
-def download_text_file(file_name, content, key=None):
-    """Create a downloadable link for a text file with the given content."""
-    st.download_button(
-        label=f"Download {file_name}",
-        data=content,
-        file_name=file_name,
-        mime="text/plain",
-        key=key
-    )
-
 # Main Script
 st.title("Email Content Personalization with Darts")
 
@@ -233,17 +223,27 @@ if content_doc and darts:
     st.write("**Original Content:**")
     st.write(original_content)
 
-    # Generate Dart-specific content and provide download links
+    # Generate Dart-specific content and store for downloads
+    generated_contents = {}
     st.subheader("Generated Content for Each Dart")
-    for i, (dart, details) in enumerate(darts.items()):
+    for dart, details in darts.items():
         dart_characteristics = details["Characteristics"]
         generated_content = generate_content_for_dart(original_content, brand_summary, dart_characteristics)
         st.write(f"**Content for Dart - {dart}:**")
         st.write(generated_content)
 
-        # Create a downloadable link for each Dart's content
-        file_name = f"{dart.replace(' ', '_')}_content.txt"
-        download_text_file(file_name, generated_content, key=f"download_{i}")
+        # Store content for download
+        generated_contents[dart] = generated_content
+
+    # Download buttons for each Dart's content
+    for dart, content in generated_contents.items():
+        if st.button(f"Download content for {dart}"):
+            st.download_button(
+                label="Download",
+                data=content,
+                file_name=f"{dart.replace(' ', '_')}_content.txt",
+                mime="text/plain"
+            )
 
 # Step 4: User revision input for generated content
 st.subheader("User Revision Input")
@@ -267,5 +267,11 @@ if st.session_state["content_to_revise"] and st.session_state["revision_instruct
         st.write("**Revised Content Preview:**")
         st.write(revised_content)
 
-        # Create a downloadable link for the revised content
-        download_text_file("revised_content.txt", revised_content, key="revised_download")
+        # Button to trigger download without app re-run
+        if st.button("Download Revised Content"):
+            st.download_button(
+                label="Download",
+                data=revised_content,
+                file_name="revised_content.txt",
+                mime="text/plain"
+            )
