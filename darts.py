@@ -16,6 +16,10 @@ if "content_to_revise" not in st.session_state:
     st.session_state["content_to_revise"] = ""
 if "revision_instructions" not in st.session_state:
     st.session_state["revision_instructions"] = ""
+if 'generated_darts' not in st.session_state:
+    st.session_state['generated_darts'] = []
+if 'revised_darts' not in st.session_state:
+    st.session_state['revised_darts'] = []
 
 # Helper Functions
 def extract_text(document):
@@ -63,12 +67,12 @@ def parse_brand_elements(details_text):
         "Brand Positioning": "",
         "Unique Value Propositions": ""
     }
-    
+
     # Use regex to find sections and their content
     brand_voice_match = re.search(r'Brand Voice:(.*?)(?=Brand Positioning:|Unique Value Propositions:|$)', details_text, re.S)
     brand_positioning_match = re.search(r'Brand Positioning:(.*?)(?=Unique Value Propositions:|$)', details_text, re.S)
     unique_value_propositions_match = re.search(r'Unique Value Propositions:(.*)', details_text, re.S)
-    
+
     if brand_voice_match:
         brand_elements["Brand Voice"] = brand_voice_match.group(1).strip()
     if brand_positioning_match:
@@ -84,7 +88,7 @@ def parse_brand_elements(details_text):
     for key, value in brand_elements.items():
         if not value:
             brand_elements[key] = "No information available."
-    
+
     return brand_elements
 
 def extract_dart_names(document):
@@ -94,12 +98,12 @@ def extract_dart_names(document):
         f"List only the names of each Dart mentioned in the following document. Do not include any descriptions, "
         f"characteristics, or psychographic drivers, just list the Dart names as a numbered list:\n\n{content}"
     )
-    
-    response = openai.chat.completions.create(
+
+    response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    
+
     dart_names = [
         line.strip() for line in response.choices[0].message.content.splitlines()
         if line.strip() and all(color not in line for color in generic_darts)
@@ -116,21 +120,21 @@ def extract_dart_details(document, dart_name):
         f"- Psychographic Drivers: (list psychographic drivers here)\n\n"
         f"Document content:\n\n{content}"
     )
-    
-    response = openai.chat.completions.create(
+
+    response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    
+
     details_text = response.choices[0].message.content.strip()
     characteristics = ""
     psychographic_drivers = ""
-    
+
     if "Characteristics:" in details_text:
         characteristics = details_text.split("Characteristics:", 1)[1].split("Psychographic Drivers:", 1)[0].strip().strip("*-")
     if "Psychographic Drivers:" in details_text:
         psychographic_drivers = details_text.split("Psychographic Drivers:", 1)[1].strip().strip("*-")
-    
+
     return {
         "Characteristics": remove_bullets(characteristics),
         "Psychographic Drivers": remove_bullets(psychographic_drivers)
@@ -140,20 +144,20 @@ def extract_all_darts(document):
     """Combine functions to extract all specific Darts and their details one by one."""
     darts = {}
     dart_names = extract_dart_names(document)
-    
+
     for dart_name in dart_names:
         dart_details = extract_dart_details(document, dart_name)
         darts[dart_name] = dart_details
-    
+
     return darts
 
 def generate_content_for_dart(content, brand_summary, dart_characteristics):
     """Generate content tailored for a specific Dart, considering brand guidelines."""
-    
+
     brand_voice = brand_summary["Brand Voice"]
     brand_positioning = brand_summary["Brand Positioning"]
     unique_value_propositions = brand_summary["Unique Value Propositions"]
-    
+
     prompt = (
         f"Rewrite the following content to appeal to an audience with these characteristics: {dart_characteristics}. "
         f"Ensure the content reflects the brand voice, positioning, and unique value propositions as described:\n\n"
@@ -162,12 +166,12 @@ def generate_content_for_dart(content, brand_summary, dart_characteristics):
         f"- Unique Value Propositions: {unique_value_propositions}\n\n"
         f"Here is the original content:\n\n{content}"
     )
-    
-    response = openai.chat.completions.create(
+
+    response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    
+
     return format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
 
 def create_download_link(text, filename):
@@ -192,14 +196,14 @@ if brand_style_guide or manual_brand_input:
         f"- Brand Voice:\n- Brand Positioning:\n- Unique Value Propositions:\n\n"
         f"Brand Guidelines Content:\n\n{content}"
     )
-    
-    response = openai.chat.completions.create(
+
+    response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    
+
     brand_summary = parse_brand_elements(response.choices[0].message.content.strip())
-    
+
     if brand_summary:
         st.write("**Brand Voice:**")
         st.write(brand_summary["Brand Voice"])
@@ -214,6 +218,7 @@ darts_doc = st.file_uploader("Upload Darts document", type=["pdf", "docx", "txt"
 
 if darts_doc:
     darts = extract_all_darts(darts_doc)
+    st.session_state['generated_darts'] = darts  # Save extracted darts in session state
     st.write("**Client's Darts:**")
     for dart, details in darts.items():
         if details["Characteristics"] != "No information available." or details["Psychographic Drivers"] != "No information available.":
@@ -225,18 +230,18 @@ if darts_doc:
 st.subheader("Content Personalization for All Darts")
 content_doc = st.file_uploader("Upload sample content (e.g., an email)", type=["pdf", "docx", "txt"])
 
-if content_doc and darts:
+if content_doc and 'generated_darts' in st.session_state:
     original_content = extract_text(content_doc)
     st.write("**Original Content:**")
-    st.write(original_content)
+    st.text_area("Displayed Content", original_content, height=200, key="original_display")
 
-    # Generate Dart-specific content and provide download links immediately below each section
     st.subheader("Generated Content for Each Dart")
-    for dart, details in darts.items():
+    for dart, details in st.session_state['generated_darts'].items():
         dart_characteristics = details["Characteristics"]
         generated_content = generate_content_for_dart(original_content, brand_summary, dart_characteristics)
+        st.session_state['generated_darts'][dart] = generated_content  # Save in session state
         st.write(f"**Content for Dart - {dart}:**")
-        st.write(generated_content)
+        st.text_area(f"Generated Content for {dart}", generated_content, height=150, key=f"generated_{dart}")
 
         # Create a custom download link using markdown
         download_link = create_download_link(generated_content, f"{dart.replace(' ', '_')}_content.txt")
@@ -254,15 +259,15 @@ if st.session_state["content_to_revise"] and st.session_state["revision_instruct
             f"Instructions: {st.session_state['revision_instructions']}\n\n"
             f"Content:\n{st.session_state['content_to_revise']}"
         )
-        
-        response = openai.chat.completions.create(
+
+        response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
         )
-        
+
         revised_content = format_with_spacing(remove_bullets(response.choices[0].message.content.strip()))
         st.write("**Revised Content Preview:**")
-        st.write(revised_content)
+        st.text_area("Revised Content", revised_content, height=200, key="revised_display")
 
         # Create a download link for the revised content
         download_link = create_download_link(revised_content, "revised_content.txt")
