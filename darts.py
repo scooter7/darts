@@ -2,6 +2,7 @@ import streamlit as st
 import openai
 import fitz  # PyMuPDF for PDF text extraction
 from docx import Document  # python-docx for Word files
+import re  # Import regex for pattern matching
 
 # Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -83,8 +84,8 @@ def summarize_brand_style(document=None, manual_input=None):
     return {key: remove_bullets(value) for key, value in brand_elements.items()}
 
 def remove_bullets(text):
-    """Remove bullet points or special characters from the beginning of each line."""
-    return '\n'.join([line.lstrip("-*•").strip() for line in text.splitlines() if line.strip()])
+    """Remove bullet points, numbered lists, or special characters from the beginning of each line."""
+    return '\n'.join([re.sub(r'^\d+\.\s*|^[\-*•]\s*', '', line).strip() for line in text.splitlines() if line.strip()])
 
 def extract_dart_names(document):
     """Extract only the names of specific Darts (excluding generic and color-based ones) from the document."""
