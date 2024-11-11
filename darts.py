@@ -5,6 +5,62 @@ from docx import Document  # python-docx for Word files
 import re  # Import regex for pattern matching
 import base64  # For encoding download content
 
+st.markdown(
+    """
+    <style>
+    .st-emotion-cache-12fmjuu.ezrtsby2 {
+        display: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <style>
+    .logo-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .logo-container img {
+        width: 300px;
+    }
+    .app-container {
+        border-left: 5px solid #58258b;
+        border-right: 5px solid #58258b;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    .stTextArea, .stTextInput, .stMultiSelect, .stSlider {
+        color: #42145f;
+    }
+    .stButton button {
+        background-color: #fec923;
+        color: #42145f;
+    }
+    .stButton button:hover {
+        background-color: #42145f;
+        color: #fec923;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <div class="logo-container">
+        <img src="https://media.freemalaysiatoday.com/wp-content/uploads/2023/12/6a15ae07-ai-freepik.jpg" alt="Logo">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown('<div class="app-container">', unsafe_allow_html=True)
+
 # Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -181,7 +237,7 @@ def create_download_link(text, filename):
     return href
 
 # Main Script
-st.title("Email Content Personalization with Darts")
+st.title("Darts at Scale")
 
 # Step 1: Upload or manually enter client’s brand and style guide
 st.subheader("Client's Brand and Style Guide")
